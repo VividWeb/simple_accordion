@@ -73,7 +73,7 @@ $addSelected = true;
             <div class="form-group">
                 <label class="col-xs-3 control-label" for="description<%=sort%>"><?=t('Description:')?></label>
                 <div class="col-xs-9">
-                    <textarea class="redactor-content" name="description[]" id="description<%=sort%>"><%=description%></textarea>
+                    <textarea id="description<%=sort%>" class="editor-content editor-content-<?php echo $bID?>" name="<?php echo $view->field('description'); ?>[]"><%=description%></textarea>
                 </div>
             </div>
             <div class="form-group">
@@ -100,7 +100,12 @@ var editItem = function(i){
 var deleteItem = function(i) {
     var confirmDelete = confirm('<?php echo t('Are you sure?') ?>');
     if(confirmDelete == true) {
-        $(".item[data-order='"+i+"']").remove();
+        var $el = $(".item[data-order='"+i+"']");
+        var itemId = $el.find('.editor-content').attr('id');
+        if (typeof CKEDITOR === 'object') {
+            CKEDITOR.instances[itemId].destroy();
+        }
+        $el.remove();
         indexItems();
     }
 };
@@ -131,6 +136,11 @@ $(function(){
     
         //use when using Redactor (wysiwyg)
         var CCM_EDITOR_SECURITY_TOKEN = "<?php echo Loader::helper('validation/token')->generate('editor')?>";
+
+        <?php
+        $editorJavascript = Core::make('editor')->outputStandardEditorInitJSFunction();
+        ?>
+        var launchEditor = <?=$editorJavascript?>;
         
         //Define container and items
         var itemsContainer = $('.items-container');
@@ -171,18 +181,14 @@ $(function(){
         //Init Index
         indexItems();
 
-        //Init Redactor
-        $('.redactor-content').redactor({
-            minHeight: '200',
-            'concrete5': {
-                filemanager: <?php echo $fp->canAccessFileManager()?>,
-                sitemap: <?php echo $tp->canAccessSitemap()?>,
-                lightbox: true
+        //Init editor
+        $(function() {  // activate editors
+            if ($('.editor-content-<?php echo $bID?>').length) {
+                launchEditor($('.editor-content-<?php echo $bID?>'));
             }
         });
         
     //CREATE NEW ITEM
-        
         $('.btn-add-item').click(function(){
             
             //Use the template to create a new item.
@@ -202,14 +208,7 @@ $(function(){
             thisModal.scrollTop(newItem.offset().top);
             
             //Init Redactor
-            newItem.find('.redactor-content').redactor({
-                minHeight: '100',
-                'concrete5': {
-                    filemanager: <?php echo $fp->canAccessFileManager()?>,
-                    sitemap: <?php echo $tp->canAccessSitemap()?>,
-                    lightbox: true
-                }
-            });
+            launchEditor(newItem.find('.editor-content'));
             
             //Init Index
             indexItems();
